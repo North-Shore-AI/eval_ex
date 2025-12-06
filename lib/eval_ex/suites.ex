@@ -6,13 +6,14 @@ defmodule EvalEx.Suites do
   CNS agent evaluations.
   """
 
-  alias EvalEx.Suites.{CNSProposer, CNSAntagonist, CNSFull}
+  alias EvalEx.Suites.{CNSAntagonist, CNSFull, CNSProposer}
 
   @doc """
   Returns the CNS Proposer evaluation suite.
 
   Evaluates claim extraction, evidence grounding, and schema compliance.
   """
+  @spec cns_proposer() :: module()
   def cns_proposer, do: CNSProposer
 
   @doc """
@@ -20,6 +21,7 @@ defmodule EvalEx.Suites do
 
   Evaluates contradiction detection, precision, recall, and beta-1 quantification.
   """
+  @spec cns_antagonist() :: module()
   def cns_antagonist, do: CNSAntagonist
 
   @doc """
@@ -27,11 +29,13 @@ defmodule EvalEx.Suites do
 
   Evaluates end-to-end Proposer -> Antagonist -> Synthesizer pipeline.
   """
+  @spec cns_full() :: module()
   def cns_full, do: CNSFull
 
   @doc """
   Lists all available suites.
   """
+  @spec all() :: list({atom(), module()})
   def all do
     [
       {:cns_proposer, CNSProposer},
@@ -43,6 +47,7 @@ defmodule EvalEx.Suites do
   @doc """
   Gets a suite by name.
   """
+  @spec get(atom()) :: {:ok, module()} | {:error, :unknown_suite}
   def get(name) do
     case name do
       :cns_proposer -> {:ok, CNSProposer}

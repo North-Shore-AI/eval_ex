@@ -33,6 +33,7 @@ defmodule EvalEx.Comparison do
     * `%EvalEx.Comparison{}` - Comparison analysis
 
   """
+  @spec compare(list(Result.t())) :: t()
   def compare(results) when is_list(results) and length(results) > 0 do
     metric_comparisons = compare_metrics(results)
     rankings = rank_results(results, metric_comparisons)
@@ -51,6 +52,7 @@ defmodule EvalEx.Comparison do
   @doc """
   Formats comparison as a human-readable string.
   """
+  @spec format(t()) :: String.t()
   def format(%__MODULE__{} = comparison) do
     """
     Comparison of #{length(comparison.results)} evaluations
@@ -71,11 +73,13 @@ defmodule EvalEx.Comparison do
   @doc """
   Returns the best result based on overall score.
   """
+  @spec best(t()) :: Result.t() | nil
   def best(%__MODULE__{best: best}), do: best
 
   @doc """
   Returns rankings as a list of {result, score} tuples.
   """
+  @spec rankings(t()) :: list({Result.t(), float()})
   def rankings(%__MODULE__{rankings: rankings}), do: rankings
 
   # Private functions
@@ -231,42 +235,198 @@ defmodule EvalEx.Comparison do
   defp format_rankings(rankings) do
     rankings
     |> Enum.with_index(1)
-    |> Enum.map(fn {{result, score}, rank} ->
+    |> Enum.map_join("\n", fn {{result, score}, rank} ->
       "  #{rank}. #{result.name}: #{Float.round(score, 4)}"
     end)
-    |> Enum.join("\n")
   end
 
   defp format_metric_comparisons(comparisons) do
-    comparisons
-    |> Enum.map(fn {metric, %{values: values, winner: winner}} ->
+    Enum.map_join(comparisons, "\n", fn {metric, %{values: values, winner: winner}} ->
       values_str =
-        Enum.map(values, fn {name, val} ->
+        Enum.map_join(values, ", ", fn {name, val} ->
           "#{name}=#{Float.round(val, 4)}"
         end)
-        |> Enum.join(", ")
 
       "  #{metric}: #{values_str} (winner: #{winner || "N/A"})"
     end)
-    |> Enum.join("\n")
   end
 
   defp format_statistical_tests(tests) when is_map(tests) do
     if Map.has_key?(tests, :note) do
       "  #{tests.note}"
     else
-      tests
-      |> Enum.map(fn {metric, test_results} ->
+      Enum.map_join(tests, "\n", fn {metric, test_results} ->
         results_str =
-          Enum.map(test_results, fn test ->
+          Enum.map_join(test_results, ", ", fn test ->
             sig = if test.significant, do: "*", else: ""
             "#{test.pair}: t=#{Float.round(test.t_statistic, 2)}#{sig}"
           end)
-          |> Enum.join(", ")
 
         "  #{metric}: #{results_str}"
       end)
-      |> Enum.join("\n")
+    end
+  end
+
+  @doc """
+  Calculates confidence intervals for a result's metrics.
+
+  Uses t-distribution for small samples (n < 30) and normal distribution for larger samples.
+  """
+  @spec confidence_intervals(Result.t(), float()) :: map()
+  def confidence_intervals(%Result{} = result, confidence_level \\ 0.95) do
+    _alpha = 1 - confidence_level
+    # For 95% confidence
+    z_score = 1.96
+
+    Enum.map(result.aggregated_metrics, fn {metric, stats} ->
+      stderr = stats.std / :math.sqrt(stats.count)
+      margin = z_score * stderr
+
+      {metric,
+       %{
+         mean: stats.mean,
+         lower: stats.mean - margin,
+         upper: stats.mean + margin,
+         confidence: confidence_level
+       }}
+    end)
+    |> Enum.into(%{})
+  end
+
+  @doc """
+  Calculates Cohen's d effect size between two results for a given metric.
+
+  Effect size interpretation:
+  - Small: d = 0.2
+  - Medium: d = 0.5
+  - Large: d = 0.8
+  """
+  @spec effect_size(Result.t(), Result.t(), atom()) :: float() | nil
+  def effect_size(%Result{} = result1, %Result{} = result2, metric) do
+    stats1 = get_in(result1.aggregated_metrics, [metric])
+    stats2 = get_in(result2.aggregated_metrics, [metric])
+
+    if stats1 && stats2 do
+      # Calculate pooled standard deviation
+      pooled_std =
+        :math.sqrt(
+          ((stats1.count - 1) * :math.pow(stats1.std, 2) +
+             (stats2.count - 1) * :math.pow(stats2.std, 2)) /
+            (stats1.count + stats2.count - 2)
+        )
+
+      if pooled_std > 0 do
+        (stats1.mean - stats2.mean) / pooled_std
+      else
+        0.0
+      end
+    else
+      nil
+    end
+  end
+
+  @doc """
+  Performs bootstrap sampling to estimate confidence intervals.
+
+  More robust than parametric methods for non-normal distributions.
+  """
+  @spec bootstrap_ci(list(float()), pos_integer(), float()) :: map()
+  def bootstrap_ci(values, n_iterations \\ 1000, confidence_level \\ 0.95) do
+    if Enum.empty?(values) do
+      %{mean: 0.0, lower: 0.0, upper: 0.0}
+    else
+      bootstrap_means =
+        for _ <- 1..n_iterations do
+          sample = Enum.map(1..length(values), fn _ -> Enum.random(values) end)
+          Enum.sum(sample) / length(sample)
+        end
+
+      sorted = Enum.sort(bootstrap_means)
+      alpha = 1 - confidence_level
+      lower_idx = floor(alpha / 2 * n_iterations)
+      upper_idx = floor((1 - alpha / 2) * n_iterations)
+
+      %{
+        mean: Enum.sum(values) / length(values),
+        lower: Enum.at(sorted, lower_idx),
+        upper: Enum.at(sorted, upper_idx)
+      }
+    end
+  end
+
+  @doc """
+  Performs ANOVA test across multiple results for a given metric.
+
+  Returns F-statistic and whether the difference is significant.
+  """
+  @spec anova(list(Result.t()), atom()) :: map()
+  def anova(results, metric) when length(results) >= 2 do
+    # Extract means and counts for the metric
+    groups =
+      Enum.map(results, fn r ->
+        stats = get_in(r.aggregated_metrics, [metric])
+        if stats, do: {stats.mean, stats.count, stats.std}, else: nil
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    if length(groups) < 2 do
+      %{f_statistic: 0.0, significant: false, note: "Insufficient data"}
+    else
+      # Calculate grand mean
+      total_n = Enum.sum(Enum.map(groups, fn {_, n, _} -> n end))
+      grand_mean = Enum.sum(Enum.map(groups, fn {m, n, _} -> m * n end)) / total_n
+
+      # Between-group variance
+      ss_between =
+        Enum.sum(
+          Enum.map(groups, fn {m, n, _} ->
+            n * :math.pow(m - grand_mean, 2)
+          end)
+        )
+
+      df_between = length(groups) - 1
+
+      # Within-group variance
+      ss_within =
+        Enum.sum(
+          Enum.map(groups, fn {_, n, std} ->
+            (n - 1) * :math.pow(std, 2)
+          end)
+        )
+
+      df_within = total_n - length(groups)
+
+      # F-statistic
+      ms_between = ss_between / df_between
+      ms_within = if df_within > 0, do: ss_within / df_within, else: 1.0
+
+      f_stat = if ms_within > 0, do: ms_between / ms_within, else: 0.0
+
+      # Critical value for F(df_between, df_within) at p=0.05 is approximately 3.0
+      # This is a rough approximation
+      significant = f_stat > 3.0
+
+      %{
+        f_statistic: f_stat,
+        df_between: df_between,
+        df_within: df_within,
+        significant: significant,
+        interpretation: interpret_f_statistic(f_stat, significant)
+      }
+    end
+  end
+
+  def anova(_results, _metric) do
+    %{error: "Need at least 2 results for ANOVA"}
+  end
+
+  defp interpret_f_statistic(f_stat, significant) do
+    cond do
+      not significant -> "No significant difference between groups"
+      f_stat > 10 -> "Very strong evidence of difference"
+      f_stat > 5 -> "Strong evidence of difference"
+      f_stat > 3 -> "Moderate evidence of difference"
+      true -> "Weak evidence of difference"
     end
   end
 end

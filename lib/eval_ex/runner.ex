@@ -14,6 +14,7 @@ defmodule EvalEx.Runner do
   @doc """
   Runs an evaluation module with the given model outputs.
   """
+  @spec run(module(), list(), keyword()) :: {:ok, Result.t()} | {:error, term()}
   def run(evaluation, model_outputs, opts \\ []) do
     opts = Keyword.merge(@default_opts, opts)
     start_time = System.monotonic_time(:millisecond)
@@ -41,9 +42,10 @@ defmodule EvalEx.Runner do
     case Keyword.get(opts, :ground_truth) do
       nil ->
         # Try to load from dataset
-        case Code.ensure_loaded?(EvalEx.Datasets) do
-          true -> EvalEx.Datasets.load(evaluation.dataset())
-          false -> {:error, :no_ground_truth}
+        if Code.ensure_loaded?(EvalEx.Datasets) do
+          apply(EvalEx.Datasets, :load, [evaluation.dataset()])
+        else
+          {:error, :no_ground_truth}
         end
 
       truth when is_list(truth) ->

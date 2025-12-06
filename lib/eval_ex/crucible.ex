@@ -24,6 +24,7 @@ defmodule EvalEx.Crucible do
     * `:description` - Description of the experiment
 
   """
+  @spec submit(Result.t(), keyword()) :: {:ok, atom()} | {:error, term()}
   def submit(%Result{} = result, opts \\ []) do
     experiment_name = Keyword.fetch!(opts, :experiment_name)
     track_metrics = Keyword.get(opts, :track_metrics, true)
@@ -78,6 +79,7 @@ defmodule EvalEx.Crucible do
   @doc """
   Formats result for Crucible telemetry events.
   """
+  @spec to_telemetry_events(Result.t()) :: list(map())
   def to_telemetry_events(%Result{} = result) do
     result.aggregated_metrics
     |> Enum.map(fn {metric_name, stats} ->
@@ -96,6 +98,7 @@ defmodule EvalEx.Crucible do
   @doc """
   Exports result in Crucible-compatible format.
   """
+  @spec export(Result.t(), :json | :map) :: {:ok, String.t() | map()} | {:error, atom()}
   def export(%Result{} = result, format \\ :json) do
     data = %{
       evaluation: result.name,

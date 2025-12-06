@@ -143,4 +143,160 @@ defmodule EvalEx.MetricsTest do
       assert Metrics.schema_compliance(prediction, schema) == 1.0
     end
   end
+
+  describe "fuzzy_match/2" do
+    test "returns 1.0 for identical strings" do
+      assert Metrics.fuzzy_match("hello", "hello") == 1.0
+    end
+
+    test "returns high similarity for minor differences" do
+      score = Metrics.fuzzy_match("hello", "helo")
+      assert score >= 0.8
+      assert score < 1.0
+    end
+
+    test "returns low similarity for very different strings" do
+      score = Metrics.fuzzy_match("hello", "world")
+      assert score < 0.5
+    end
+
+    test "handles empty strings" do
+      assert Metrics.fuzzy_match("", "") == 1.0
+    end
+  end
+
+  describe "meteor/2" do
+    test "returns high score for identical texts" do
+      score = Metrics.meteor("the cat sat", "the cat sat")
+      # METEOR applies fragmentation penalty even for identical texts
+      assert score > 0.7
+    end
+
+    test "returns 0.0 for completely different texts" do
+      assert Metrics.meteor("cat", "dog") == 0.0
+    end
+
+    test "computes alignment with word order consideration" do
+      score = Metrics.meteor("the cat sat on mat", "the dog sat on mat")
+      assert score > 0.0
+      assert score < 1.0
+    end
+  end
+
+  describe "pass_at_k/3" do
+    test "returns 1.0 when all samples pass" do
+      predictions = [
+        %{passed: true},
+        %{passed: true},
+        %{passed: true}
+      ]
+
+      assert Metrics.pass_at_k(predictions, nil, 3) == 1.0
+    end
+
+    test "returns 0.0 when no samples pass" do
+      predictions = [
+        %{passed: false},
+        %{passed: false}
+      ]
+
+      assert Metrics.pass_at_k(predictions, nil, 2) == 0.0
+    end
+
+    test "computes partial pass rate" do
+      predictions = [
+        %{passed: true},
+        %{passed: false},
+        %{passed: true}
+      ]
+
+      score = Metrics.pass_at_k(predictions, nil, 3)
+      assert_in_delta score, 0.667, 0.01
+    end
+
+    test "handles single prediction" do
+      assert Metrics.pass_at_k(%{passed: true}, nil, 1) == 1.0
+      assert Metrics.pass_at_k(%{passed: false}, nil, 1) == 0.0
+    end
+  end
+
+  describe "bert_score/2" do
+    test "returns map with precision, recall, f1" do
+      result = Metrics.bert_score("the cat", "the cat")
+      assert Map.has_key?(result, :precision)
+      assert Map.has_key?(result, :recall)
+      assert Map.has_key?(result, :f1)
+    end
+
+    test "returns high scores for identical texts" do
+      result = Metrics.bert_score("hello world", "hello world")
+      assert result.f1 == 1.0
+    end
+  end
+
+  describe "perplexity/1" do
+    test "computes perplexity from log probabilities" do
+      log_probs = [-1.0, -1.5, -0.5]
+      result = Metrics.perplexity(log_probs)
+      assert result > 0.0
+    end
+
+    test "returns 0.0 for empty list" do
+      assert Metrics.perplexity([]) == 0.0
+    end
+
+    test "lower perplexity for higher probabilities" do
+      high_prob = [-0.1, -0.1, -0.1]
+      low_prob = [-2.0, -2.0, -2.0]
+
+      assert Metrics.perplexity(high_prob) < Metrics.perplexity(low_prob)
+    end
+  end
+
+  describe "diversity/1" do
+    test "returns map with distinct-1, distinct-2, distinct-3" do
+      result = Metrics.diversity("the cat sat on the mat")
+      assert Map.has_key?(result, :distinct_1)
+      assert Map.has_key?(result, :distinct_2)
+      assert Map.has_key?(result, :distinct_3)
+    end
+
+    test "high diversity for unique words" do
+      result = Metrics.diversity("each word is unique here")
+      assert result.distinct_1 > 0.9
+    end
+
+    test "low diversity for repeated words" do
+      result = Metrics.diversity("cat cat cat cat cat")
+      assert result.distinct_1 < 0.5
+    end
+
+    test "handles empty text" do
+      result = Metrics.diversity("")
+      assert result.distinct_1 == 0.0
+    end
+  end
+
+  describe "factual_consistency/2" do
+    test "returns 1.0 when all facts present" do
+      prediction = "vitamin d reduces severity"
+      ground_truth = "vitamin d reduces severity"
+      assert Metrics.factual_consistency(prediction, ground_truth) == 1.0
+    end
+
+    test "returns partial score for partial consistency" do
+      prediction = "vitamin d is important"
+      ground_truth = "vitamin d reduces covid severity"
+      score = Metrics.factual_consistency(prediction, ground_truth)
+      assert score > 0.0
+      assert score < 1.0
+    end
+
+    test "returns 0.0 for completely inconsistent facts" do
+      prediction = "cats are animals"
+      ground_truth = "vitamin d reduces severity"
+      score = Metrics.factual_consistency(prediction, ground_truth)
+      assert score == 0.0
+    end
+  end
 end

@@ -2,7 +2,7 @@ defmodule EvalExTest do
   use ExUnit.Case
   doctest EvalEx
 
-  alias EvalEx.{Result, Comparison}
+  alias EvalEx.{Comparison, Result}
 
   # Test evaluation module
   defmodule TestEval do

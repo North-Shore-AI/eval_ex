@@ -33,7 +33,7 @@ defmodule EvalEx do
 
   """
 
-  alias EvalEx.{Runner, Result, Comparison}
+  alias EvalEx.{Comparison, Result, Runner}
 
   @doc """
   Runs an evaluation module with the given model outputs.

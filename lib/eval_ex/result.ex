@@ -39,6 +39,8 @@ defmodule EvalEx.Result do
     * `opts` - Optional metadata
 
   """
+  @spec new(String.t(), atom(), list(map()), non_neg_integer(), non_neg_integer(), keyword()) ::
+          t()
   def new(name, dataset, metrics, samples, duration_ms, opts \\ []) do
     aggregated = aggregate_metrics(metrics)
 
@@ -57,6 +59,7 @@ defmodule EvalEx.Result do
   @doc """
   Aggregates individual sample metrics into summary statistics.
   """
+  @spec aggregate_metrics(list(map())) :: map()
   def aggregate_metrics(metrics) when is_list(metrics) do
     metrics
     |> Enum.reduce(%{}, fn sample_metrics, acc ->
@@ -81,6 +84,7 @@ defmodule EvalEx.Result do
   @doc """
   Converts result to a summary map.
   """
+  @spec to_summary(t()) :: map()
   def to_summary(%__MODULE__{} = result) do
     %{
       name: result.name,
@@ -99,6 +103,7 @@ defmodule EvalEx.Result do
   @doc """
   Formats result as a human-readable string.
   """
+  @spec format(t()) :: String.t()
   def format(%__MODULE__{} = result) do
     """
     Evaluation: #{result.name}
@@ -112,11 +117,9 @@ defmodule EvalEx.Result do
   end
 
   defp format_metrics(metrics) do
-    metrics
-    |> Enum.map(fn {name, stats} ->
+    Enum.map_join(metrics, "\n", fn {name, stats} ->
       "  #{name}: #{Float.round(stats.mean, 4)} (±#{Float.round(stats.std, 4)})"
     end)
-    |> Enum.join("\n")
   end
 
   # Statistical helpers
