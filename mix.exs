@@ -1,30 +1,50 @@
 defmodule EvalEx.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @source_url "https://github.com/North-Shore-AI/eval_ex"
+
+  def version, do: @version
+
   def project do
     [
       app: :eval_ex,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      description: "Model evaluation harness for standardized benchmarking",
+      description: description(),
       package: package(),
-      docs: docs()
+      docs: docs(),
+      name: "EvalEx",
+      source_url: @source_url,
+      homepage_url: @source_url
     ]
+  end
+
+  defp description do
+    """
+    Model evaluation harness for standardized benchmarking with semantic similarity, exact match, and custom metrics.
+    """
   end
 
   defp package do
     [
-      licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/North-Shore-AI/eval_ex"}
+      name: "eval_ex",
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => @source_url},
+      files: ~w(lib mix.exs README.md LICENSE assets)
     ]
   end
 
   defp docs do
     [
-      main: "EvalEx",
-      extras: ["README.md"]
+      main: "readme",
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      assets: %{"assets" => "assets"},
+      logo: "assets/eval_ex.svg",
+      extras: ["README.md", "LICENSE"]
     ]
   end
 
