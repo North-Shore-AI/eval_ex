@@ -6,11 +6,11 @@ defmodule EvalEx.Result do
   @type t :: %__MODULE__{
           name: String.t(),
           dataset: atom(),
-          metrics: map(),
+          metrics: [map()],
           aggregated_metrics: map(),
           samples: non_neg_integer(),
           duration_ms: non_neg_integer(),
-          timestamp: DateTime.t(),
+          timestamp: DateTime.t() | nil,
           metadata: map()
         }
 
