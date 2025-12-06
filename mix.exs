@@ -31,7 +31,7 @@ defmodule EvalEx.MixProject do
   defp package do
     [
       name: "eval_ex",
-      licenses: ["Apache-2.0"],
+      licenses: ["MIT"],
       links: %{"GitHub" => @source_url},
       files: ~w(lib mix.exs README.md LICENSE assets)
     ]
