@@ -344,7 +344,7 @@ EvalEx implements the evaluation framework specified in the CNS 3.0 Agent Playbo
 - **Statistical Testing**: T-tests for comparing evaluation runs
 - **Actionable Feedback**: Detailed breakdowns for debugging and improvement
 
-See [CNS 3.0 Agent Playbook](../tinkerer/CLAUDE.md) for complete specifications.
+See the CNS 3.0 Agent Playbook in the tinkerer project for complete specifications.
 
 ## Development
 
@@ -371,6 +371,6 @@ MIT
 
 - [GitHub Repository](https://github.com/North-Shore-AI/eval_ex)
 - [North Shore AI Monorepo](https://github.com/North-Shore-AI)
-- [Crucible Framework](../crucible_framework)
-- [CNS Project](../cns)
+- Crucible Framework (see North Shore AI monorepo)
+- CNS Project (see North Shore AI monorepo)
 
