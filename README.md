@@ -1,6 +1,22 @@
-# EvalEx
+<p align="center">
+  <img src="assets/eval_ex.svg" alt="EvalEx" width="200">
+</p>
 
-Model evaluation harness for standardized benchmarking.
+<h1 align="center">EvalEx</h1>
+
+<p align="center">
+  <a href="https://github.com/North-Shore-AI/eval_ex/actions"><img src="https://github.com/North-Shore-AI/eval_ex/workflows/CI/badge.svg" alt="CI Status"></a>
+  <a href="https://hex.pm/packages/eval_ex"><img src="https://img.shields.io/hexpm/v/eval_ex.svg" alt="Hex.pm"></a>
+  <a href="https://hexdocs.pm/eval_ex"><img src="https://img.shields.io/badge/docs-hexdocs-blue.svg" alt="Documentation"></a>
+  <img src="https://img.shields.io/badge/elixir-%3E%3D%201.14-purple.svg" alt="Elixir">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
+</p>
+
+<p align="center">
+  Model evaluation harness with comprehensive metrics and statistical analysis
+</p>
+
+---
 
 EvalEx provides a framework for defining, running, and comparing model evaluations with built-in metrics, benchmark suites, and Crucible integration. Designed for the CNS 3.0 dialectical reasoning system and compatible with any ML evaluation workflow.
 
@@ -152,13 +168,29 @@ IO.puts(EvalEx.Comparison.format(comparison))
 ### Text Metrics
 
 - `exact_match/2` - Exact string match (case-insensitive, trimmed)
+- `fuzzy_match/2` - Fuzzy string matching using Levenshtein distance
 - `f1/2` - Token-level F1 score
 - `bleu/3` - BLEU score with n-gram overlap
 - `rouge/2` - ROUGE-L score (longest common subsequence)
+- `meteor/2` - METEOR score approximation with alignment and word order
+
+### Semantic & Quality Metrics
+
+- `entailment/2` - Entailment score (placeholder for NLI model integration)
+- `bert_score/2` - BERTScore placeholder (returns precision, recall, f1)
+- `factual_consistency/2` - Validates facts in prediction align with ground truth
+
+### Code Generation Metrics
+
+- `pass_at_k/3` - Pass@k metric for code generation (percentage of samples passing tests)
+- `perplexity/1` - Perplexity metric for language model outputs
+
+### Diversity & Quality Metrics
+
+- `diversity/1` - Text diversity using distinct n-grams (distinct-1, distinct-2, distinct-3)
 
 ### CNS-Specific Metrics
 
-- `entailment/2` - Entailment score (placeholder for NLI model integration)
 - `citation_accuracy/2` - Validates citations exist and support claims
 - `schema_compliance/2` - Validates prediction conforms to expected schema
 
@@ -192,6 +224,57 @@ prediction = %{name: "test", value: 42, status: "ok"}
 schema = %{required: [:name, :value, :status]}
 EvalEx.Metrics.schema_compliance(prediction, schema)
 # => 1.0
+```
+
+## Statistical Analysis
+
+EvalEx provides comprehensive statistical analysis tools for comparing evaluation results:
+
+### Confidence Intervals
+
+```elixir
+# Calculate confidence intervals for all metrics
+intervals = EvalEx.Comparison.confidence_intervals(result, 0.95)
+# => %{
+#      accuracy: %{mean: 0.85, lower: 0.82, upper: 0.88, confidence: 0.95},
+#      f1: %{mean: 0.80, lower: 0.77, upper: 0.83, confidence: 0.95}
+#    }
+```
+
+### Effect Size (Cohen's d)
+
+```elixir
+# Calculate effect size between two results
+effect = EvalEx.Comparison.effect_size(result1, result2, :accuracy)
+# => -0.45  (negative means result2 has higher accuracy)
+
+# Interpretation:
+# - Small: d = 0.2
+# - Medium: d = 0.5
+# - Large: d = 0.8
+```
+
+### Bootstrap Confidence Intervals
+
+```elixir
+# More robust than parametric methods for non-normal distributions
+values = [0.7, 0.75, 0.8, 0.85, 0.9]
+ci = EvalEx.Comparison.bootstrap_ci(values, 1000, 0.95)
+# => %{mean: 0.80, lower: 0.71, upper: 0.89}
+```
+
+### ANOVA (Analysis of Variance)
+
+```elixir
+# Test for significant differences across multiple results
+result = EvalEx.Comparison.anova([result1, result2, result3], :accuracy)
+# => %{
+#      f_statistic: 5.2,
+#      df_between: 2,
+#      df_within: 6,
+#      significant: true,
+#      interpretation: "Strong evidence of difference"
+#    }
 ```
 
 ## CNS Benchmark Suites
