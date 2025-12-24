@@ -2,13 +2,23 @@
 
 ## Status: Production Ready
 
-**Test Count:** 79 tests (0 failures)
+**Version:** 0.1.1
+**Test Count:** 152 tests (0 failures)
 **Quality Gates:** All passing
-**Date:** 2025-12-06
+**Date:** 2025-12-23
 
-## What Changed
+## What Changed (v0.1.1)
 
-### New Metrics (11)
+### inspect-ai Parity Modules (7)
+1. `EvalEx.Task` - Evaluation task definition with behaviour support
+2. `EvalEx.Task.Registry` - GenServer-based task discovery
+3. `EvalEx.Sample` - Rich sample struct with metadata, scores, error tracking
+4. `EvalEx.Scorer` - Behaviour for implementing custom scorers
+5. `EvalEx.Scorer.ExactMatch` - Exact string match with normalization
+6. `EvalEx.Scorer.LLMJudge` - LLM-as-judge with dependency injection
+7. `EvalEx.Error` - Error categorization for evaluation failures
+
+### Metrics (11)
 1. `fuzzy_match/2` - Levenshtein distance similarity
 2. `meteor/2` - Alignment-based text metric
 3. `bert_score/2` - Semantic similarity (placeholder)

@@ -29,6 +29,70 @@ EvalEx provides a framework for defining, running, and comparing model evaluatio
 - **Crucible Integration**: Submit results to Crucible Framework for tracking and visualization
 - **Parallel Execution**: Run evaluations in parallel for faster results
 
+## inspect-ai Parity
+
+EvalEx provides evaluation abstractions inspired by [inspect-ai](https://github.com/UKGovernmentBEIS/inspect_ai):
+
+| Module | Purpose |
+|--------|---------|
+| `EvalEx.Task` | Evaluation task definition with behaviour support |
+| `EvalEx.Task.Registry` | GenServer-based task discovery |
+| `EvalEx.Sample` | Rich sample struct with metadata, scores, error tracking |
+| `EvalEx.Scorer` | Behaviour for implementing custom scorers |
+| `EvalEx.Scorer.ExactMatch` | Exact string match scorer with normalization |
+| `EvalEx.Scorer.LLMJudge` | LLM-as-judge scorer with dependency injection |
+| `EvalEx.Error` | Error categorization for evaluation failures |
+
+### Task & Sample Usage
+
+```elixir
+# Define a task
+defmodule MyTask do
+  use EvalEx.Task
+
+  @impl true
+  def task_id, do: "my_task"
+
+  @impl true
+  def name, do: "My Evaluation Task"
+
+  @impl true
+  def dataset, do: :scifact
+
+  @impl true
+  def scorers, do: [EvalEx.Scorer.ExactMatch]
+end
+
+# Create samples
+sample = EvalEx.Sample.new(
+  id: "sample_1",
+  input: "What is 2+2?",
+  target: "4",
+  metadata: %{difficulty: "easy"}
+)
+|> EvalEx.Sample.with_output("4")
+|> EvalEx.Sample.with_score(:exact_match, 1.0)
+```
+
+### Scorer Usage
+
+```elixir
+# ExactMatch scorer
+sample = EvalEx.Sample.new(input: "test", target: "answer")
+  |> EvalEx.Sample.with_output("answer")
+
+{:ok, score} = EvalEx.Scorer.ExactMatch.score(sample)
+# => %{value: 1.0, answer: "answer", explanation: nil, metadata: %{}}
+
+# LLMJudge scorer (requires generate_fn injection)
+generate_fn = fn messages, _opts ->
+  {:ok, %{content: "CORRECT"}}
+end
+
+{:ok, score} = EvalEx.Scorer.LLMJudge.score(sample, generate_fn: generate_fn)
+# => %{value: 1.0, answer: "answer", explanation: "CORRECT", metadata: %{grade: :correct}}
+```
+
 ## Installation
 
 Add `eval_ex` to your list of dependencies in `mix.exs`:
@@ -36,7 +100,7 @@ Add `eval_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:eval_ex, path: "../eval_ex"}
+    {:eval_ex, "~> 0.1.1"}
   ]
 end
 ```
