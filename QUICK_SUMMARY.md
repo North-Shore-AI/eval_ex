@@ -2,30 +2,23 @@
 
 ## Status: Production Ready
 
-**Version:** 0.1.1
-**Test Count:** 152 tests (0 failures)
+**Version:** 0.1.2
+**Test Count:** 164 tests (0 failures)
 **Quality Gates:** All passing
-**Date:** 2025-12-23
+**Date:** 2025-12-24
 
-## What Changed (v0.1.1)
+## What Changed (v0.1.2)
 
-### inspect-ai Parity Modules (7)
-1. `EvalEx.Task` - Evaluation task definition with behaviour support
-2. `EvalEx.Task.Registry` - GenServer-based task discovery
-3. `EvalEx.Sample` - Rich sample struct with metadata, scores, error tracking
-4. `EvalEx.Scorer` - Behaviour for implementing custom scorers
-5. `EvalEx.Scorer.ExactMatch` - Exact string match with normalization
-6. `EvalEx.Scorer.LLMJudge` - LLM-as-judge with dependency injection
-7. `EvalEx.Error` - Error categorization for evaluation failures
+### inspect-ai Parity Updates
+1. `EvalEx.Task.task/2` - Task decorator macro with registry metadata
+2. `EvalEx.Task.Definition` - Registry-ready task definitions
+3. `EvalEx.Dataset` - Adapter for CrucibleDatasets -> EvalEx samples
+4. `EvalEx.Scorer.LLMJudge` - `GRADE: C/I/P` parsing with partial credit
+5. `EvalEx.Sample` - Added sandbox/files/setup fields
 
-### Metrics (11)
-1. `fuzzy_match/2` - Levenshtein distance similarity
-2. `meteor/2` - Alignment-based text metric
-3. `bert_score/2` - Semantic similarity (placeholder)
-4. `factual_consistency/2` - Fact alignment checking
-5. `pass_at_k/3` - Code generation metric
-6. `perplexity/1` - Language model quality
-7. `diversity/1` - Text variety (distinct n-grams)
+### Metrics Additions
+1. `accuracy/1` - Mean accuracy from scores
+2. `stderr/1` - Standard error of the mean
 
 ### Statistical Analysis (4)
 1. `confidence_intervals/2` - Parametric CIs
@@ -67,7 +60,7 @@ EvalEx.Comparison.anova([r1, r2, r3], :accuracy)
 ## Testing
 
 ```bash
-mix test  # 79 tests, all passing
+mix test  # 164 tests, all passing
 ```
 
 ## Documentation

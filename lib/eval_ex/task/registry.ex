@@ -13,6 +13,9 @@ defmodule EvalEx.Task.Registry do
       # Register a task module
       EvalEx.Task.Registry.register(MyTask)
 
+      # Register decorated tasks from a module
+      EvalEx.Task.Registry.register_module(MyTaskModule)
+
       # Get a task by ID
       {:ok, task_module} = EvalEx.Task.Registry.get("my_task")
 
@@ -51,6 +54,26 @@ defmodule EvalEx.Task.Registry do
   def register(task_module), do: GenServer.call(__MODULE__, {:register, task_module})
 
   @doc """
+  Registers all decorated tasks defined in a module.
+  """
+  def register_module(module, opts \\ []) do
+    registry = Keyword.get(opts, :registry, __MODULE__)
+
+    tasks =
+      if function_exported?(module, :__eval_ex_tasks__, 0) do
+        module.__eval_ex_tasks__()
+      else
+        []
+      end
+
+    Enum.each(tasks, fn task ->
+      GenServer.call(registry, {:register, task})
+    end)
+
+    :ok
+  end
+
+  @doc """
   Gets a task module by its ID.
 
   ## Examples
@@ -73,10 +96,40 @@ defmodule EvalEx.Task.Registry do
   """
   def list, do: GenServer.call(__MODULE__, :list)
 
+  @doc """
+  Create a task instance by registry name.
+  """
+  def create(task_id, opts) when is_list(opts) do
+    if Keyword.has_key?(opts, :registry) do
+      create(task_id, [], opts)
+    else
+      create(task_id, opts, [])
+    end
+  end
+
+  def create(task_id, args, opts) do
+    registry = Keyword.get(opts, :registry, __MODULE__)
+
+    case GenServer.call(registry, {:get, task_id}) do
+      {:ok, %EvalEx.Task.Definition{} = defn} ->
+        {:ok, EvalEx.Task.Definition.invoke(defn, args)}
+
+      {:ok, module} when is_atom(module) ->
+        {:ok, EvalEx.Task.from_module(module)}
+
+      error ->
+        error
+    end
+  end
+
   @impl true
   def init(_), do: {:ok, %{}}
 
   @impl true
+  def handle_call({:register, %EvalEx.Task.Definition{} = definition}, _from, state) do
+    {:reply, :ok, Map.put(state, definition.name, definition)}
+  end
+
   def handle_call({:register, module}, _from, state) do
     {:reply, :ok, Map.put(state, module.task_id(), module)}
   end

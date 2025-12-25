@@ -18,6 +18,10 @@ defmodule EvalEx.TaskTest do
       assert task.description == ""
       assert task.scorers == []
       assert task.metadata == %{}
+      assert task.display_name == "Test Task"
+      assert task.version == 0
+      assert task.message_limit == nil
+      assert task.token_limit == nil
     end
 
     test "creates task with all fields" do
@@ -30,17 +34,35 @@ defmodule EvalEx.TaskTest do
         Task.new(
           id: "full_task",
           name: "Full Task",
+          display_name: "Full Task Display",
           description: "A complete task",
           dataset: samples,
           scorers: [ExactMatch],
+          scorer: EvalEx.Scorer.LLMJudge,
+          metrics: [:accuracy, :stderr],
+          model: "gpt-4",
+          config: %{temperature: 0.7},
+          model_roles: %{grader: "gpt-4"},
+          message_limit: 5,
+          token_limit: 100,
+          version: 2,
           metadata: %{version: "1.0", difficulty: "easy"}
         )
 
       assert task.id == "full_task"
       assert task.name == "Full Task"
+      assert task.display_name == "Full Task Display"
       assert task.description == "A complete task"
       assert task.dataset == samples
       assert task.scorers == [ExactMatch]
+      assert task.scorer == EvalEx.Scorer.LLMJudge
+      assert task.metrics == [:accuracy, :stderr]
+      assert task.model == "gpt-4"
+      assert task.config == %{temperature: 0.7}
+      assert task.model_roles == %{grader: "gpt-4"}
+      assert task.message_limit == 5
+      assert task.token_limit == 100
+      assert task.version == 2
       assert task.metadata == %{version: "1.0", difficulty: "easy"}
     end
 

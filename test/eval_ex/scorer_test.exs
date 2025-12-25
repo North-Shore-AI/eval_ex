@@ -65,6 +65,12 @@ defmodule EvalEx.ScorerTest do
     end
   end
 
+  describe "metrics/0" do
+    test "defaults to empty list" do
+      assert TestScorer.metrics() == []
+    end
+  end
+
   describe "score struct" do
     test "contains all required fields" do
       sample = Sample.new(input: "test", target: "result") |> Sample.with_output("result")

@@ -44,6 +44,9 @@ defmodule EvalEx.Scorer do
               {:ok, score()} | {:error, term()}
 
   @callback scorer_id() :: String.t()
+  @callback metrics() :: [atom()]
+
+  @optional_callbacks metrics: 0
 
   @doc """
   Use this module to implement a scorer.
@@ -63,7 +66,12 @@ defmodule EvalEx.Scorer do
       """
       def scorer_id, do: __MODULE__ |> Module.split() |> List.last() |> Macro.underscore()
 
-      defoverridable scorer_id: 0
+      @doc """
+      Metrics exposed by this scorer (defaults to []).
+      """
+      def metrics, do: []
+
+      defoverridable scorer_id: 0, metrics: 0
     end
   end
 end

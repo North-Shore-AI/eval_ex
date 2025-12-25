@@ -165,6 +165,28 @@ defmodule EvalEx.MetricsTest do
     end
   end
 
+  describe "accuracy/1" do
+    test "returns mean accuracy for numeric values" do
+      assert Metrics.accuracy([1.0, 0.0, 1.0]) == 2.0 / 3.0
+    end
+
+    test "returns 0.0 for empty input" do
+      assert Metrics.accuracy([]) == 0.0
+    end
+  end
+
+  describe "stderr/1" do
+    test "computes standard error of the mean" do
+      value = Metrics.stderr([1.0, 0.0, 1.0, 0.0])
+      assert_in_delta value, 0.288675, 1.0e-6
+    end
+
+    test "returns 0.0 for fewer than two samples" do
+      assert Metrics.stderr([1.0]) == 0.0
+      assert Metrics.stderr([]) == 0.0
+    end
+  end
+
   describe "meteor/2" do
     test "returns high score for identical texts" do
       score = Metrics.meteor("the cat sat", "the cat sat")

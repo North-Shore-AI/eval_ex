@@ -12,9 +12,9 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
       end
     end
 
-    test "returns 1.0 when LLM judges as CORRECT" do
+    test "returns 1.0 when LLM grades as correct" do
       generate_fn = fn _messages, _opts ->
-        {:ok, %{content: "This is CORRECT because it matches the expected answer."}}
+        {:ok, %{content: "Reasoning...\nGRADE: C"}}
       end
 
       sample = Sample.new(input: "What is 2+2?", target: "4") |> Sample.with_output("4")
@@ -22,13 +22,12 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
 
       assert score.value == 1.0
       assert score.answer == "4"
-      assert score.explanation == "This is CORRECT because it matches the expected answer."
       assert score.metadata.grade == :correct
     end
 
-    test "returns 0.0 when LLM judges as INCORRECT" do
+    test "returns 0.0 when LLM grades as incorrect" do
       generate_fn = fn _messages, _opts ->
-        {:ok, %{content: "This is INCORRECT. The answer should be 4, not 5."}}
+        {:ok, %{content: "GRADE: I"}}
       end
 
       sample = Sample.new(input: "What is 2+2?", target: "4") |> Sample.with_output("5")
@@ -36,13 +35,36 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
 
       assert score.value == 0.0
       assert score.answer == "5"
-      assert score.explanation == "This is INCORRECT. The answer should be 4, not 5."
       assert score.metadata.grade == :incorrect
     end
 
-    test "defaults to INCORRECT when response is ambiguous" do
+    test "returns 0.5 for partial credit when enabled" do
       generate_fn = fn _messages, _opts ->
-        {:ok, %{content: "This is unclear and uncertain."}}
+        {:ok, %{content: "GRADE: P"}}
+      end
+
+      sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("partial")
+      {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn, partial_credit: true)
+
+      assert score.value == 0.5
+      assert score.metadata.grade == :partial
+    end
+
+    test "treats partial credit as incorrect when disabled" do
+      generate_fn = fn _messages, _opts ->
+        {:ok, %{content: "GRADE: P"}}
+      end
+
+      sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("partial")
+      {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn, partial_credit: false)
+
+      assert score.value == 0.0
+      assert score.metadata.grade == :incorrect
+    end
+
+    test "defaults to incorrect when grade pattern is missing" do
+      generate_fn = fn _messages, _opts ->
+        {:ok, %{content: "Unclear response"}}
       end
 
       sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("maybe")
@@ -52,19 +74,18 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
       assert score.metadata.grade == :incorrect
     end
 
-    test "builds prompt with input, target, and response" do
+    test "builds prompt with question, criterion, and answer" do
       {:ok, captured_messages} = Agent.start_link(fn -> nil end)
 
       generate_fn = fn messages, _opts ->
         Agent.update(captured_messages, fn _ -> messages end)
-        {:ok, %{content: "CORRECT"}}
+        {:ok, %{content: "GRADE: C"}}
       end
 
       sample = Sample.new(input: "What is 2+2?", target: "4") |> Sample.with_output("4")
       {:ok, _score} = LLMJudge.score(sample, generate_fn: generate_fn)
 
-      messages = Agent.get(captured_messages, & &1)
-      assert [%{role: "user", content: prompt}] = messages
+      [%{role: "user", content: prompt}] = Agent.get(captured_messages, & &1)
       assert prompt =~ "What is 2+2?"
       assert prompt =~ "4"
     end
@@ -74,31 +95,35 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
 
       generate_fn = fn messages, _opts ->
         Agent.update(captured_messages, fn _ -> messages end)
-        {:ok, %{content: "CORRECT"}}
+        {:ok, %{content: "GRADE: C"}}
       end
 
       custom_prompt = "Q: {input}\nA: {response}\nExpected: {target}\nGrade:"
 
       sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("answer")
-      {:ok, _score} = LLMJudge.score(sample, generate_fn: generate_fn, prompt: custom_prompt)
 
-      messages = Agent.get(captured_messages, & &1)
-      [%{content: prompt}] = messages
+      {:ok, _score} =
+        LLMJudge.score(sample, generate_fn: generate_fn, prompt: custom_prompt)
+
+      [%{content: prompt}] = Agent.get(captured_messages, & &1)
       assert prompt =~ "Q: test"
       assert prompt =~ "A: answer"
       assert prompt =~ "Expected: answer"
     end
 
-    test "handles nil model_output" do
-      generate_fn = fn _messages, _opts ->
-        {:ok, %{content: "INCORRECT - no output provided"}}
+    test "passes model or model_role to generate_fn" do
+      generate_fn = fn _messages, opts ->
+        send(self(), {:opts, opts})
+        {:ok, %{content: "GRADE: C"}}
       end
 
-      sample = Sample.new(input: "test", target: "answer")
-      {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn)
+      sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("answer")
 
-      assert score.value == 0.0
-      assert score.answer == nil
+      {:ok, _score} =
+        LLMJudge.score(sample, generate_fn: generate_fn, model: "grader-model")
+
+      assert_receive {:opts, opts}
+      assert opts[:model] == "grader-model"
     end
 
     test "propagates generate_fn errors" do
@@ -110,27 +135,24 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
       assert {:error, :timeout} = LLMJudge.score(sample, generate_fn: generate_fn)
     end
 
-    test "handles generate_fn returning nil content" do
+    test "handles nil model_output" do
       generate_fn = fn _messages, _opts ->
-        {:ok, %{content: nil}}
+        {:ok, %{content: "GRADE: I"}}
       end
 
-      sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("answer")
+      sample = Sample.new(input: "test", target: "answer")
       {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn)
 
-      # Should default to incorrect when content is nil
       assert score.value == 0.0
-      assert score.metadata.grade == :incorrect
+      assert score.answer == nil
     end
 
-    test "case-insensitive grade parsing" do
+    test "grade parsing is case-insensitive" do
       test_cases = [
-        {"correct", :correct},
-        {"CORRECT", :correct},
-        {"Correct", :correct},
-        {"incorrect", :incorrect},
-        {"INCORRECT", :incorrect},
-        {"Incorrect", :incorrect}
+        {"grade: c", :correct},
+        {"GRADE: C", :correct},
+        {"grade: p", :partial},
+        {"GRADE: I", :incorrect}
       ]
 
       for {response, expected_grade} <- test_cases do
@@ -139,7 +161,7 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
         end
 
         sample = Sample.new(input: "test", target: "answer") |> Sample.with_output("answer")
-        {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn)
+        {:ok, score} = LLMJudge.score(sample, generate_fn: generate_fn, partial_credit: true)
 
         assert score.metadata.grade == expected_grade
       end
@@ -149,6 +171,12 @@ defmodule EvalEx.Scorer.LLMJudgeTest do
   describe "scorer_id/0" do
     test "returns default ID" do
       assert LLMJudge.scorer_id() == "llm_judge"
+    end
+  end
+
+  describe "metrics/0" do
+    test "returns accuracy and stderr" do
+      assert LLMJudge.metrics() == [:accuracy, :stderr]
     end
   end
 end

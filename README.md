@@ -37,6 +37,8 @@ EvalEx provides evaluation abstractions inspired by [inspect-ai](https://github.
 |--------|---------|
 | `EvalEx.Task` | Evaluation task definition with behaviour support |
 | `EvalEx.Task.Registry` | GenServer-based task discovery |
+| `EvalEx.Task.Definition` | Registry metadata for decorator-defined tasks |
+| `EvalEx.Dataset` | Dataset adapters for CrucibleDatasets |
 | `EvalEx.Sample` | Rich sample struct with metadata, scores, error tracking |
 | `EvalEx.Scorer` | Behaviour for implementing custom scorers |
 | `EvalEx.Scorer.ExactMatch` | Exact string match scorer with normalization |
@@ -74,6 +76,33 @@ sample = EvalEx.Sample.new(
 |> EvalEx.Sample.with_score(:exact_match, 1.0)
 ```
 
+```elixir
+# Define registry-friendly tasks with the decorator macro
+defmodule MyTasks do
+  use EvalEx.Task, decorator: true
+
+  task example_task(), name: "example_task" do
+    EvalEx.Task.new(
+      id: "example_task",
+      name: "Example Task",
+      dataset: []
+    )
+  end
+end
+
+EvalEx.Task.Registry.register_module(MyTasks)
+{:ok, task} = EvalEx.Task.Registry.create("example_task")
+```
+
+```elixir
+# Convert CrucibleDatasets.MemoryDataset into EvalEx samples
+dataset = CrucibleDatasets.MemoryDataset.from_list([
+  %{id: "1", input: "Q1", expected: "A1"}
+])
+
+samples = EvalEx.Dataset.to_samples(dataset)
+```
+
 ### Scorer Usage
 
 ```elixir
@@ -86,11 +115,11 @@ sample = EvalEx.Sample.new(input: "test", target: "answer")
 
 # LLMJudge scorer (requires generate_fn injection)
 generate_fn = fn messages, _opts ->
-  {:ok, %{content: "CORRECT"}}
+  {:ok, %{content: "GRADE: C"}}
 end
 
 {:ok, score} = EvalEx.Scorer.LLMJudge.score(sample, generate_fn: generate_fn)
-# => %{value: 1.0, answer: "answer", explanation: "CORRECT", metadata: %{grade: :correct}}
+# => %{value: 1.0, answer: "answer", explanation: "GRADE: C", metadata: %{grade: :correct}}
 ```
 
 ## Installation
@@ -100,7 +129,7 @@ Add `eval_ex` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:eval_ex, "~> 0.1.1"}
+    {:eval_ex, "~> 0.1.2"}
   ]
 end
 ```
@@ -437,4 +466,3 @@ MIT
 - [North Shore AI Monorepo](https://github.com/North-Shore-AI)
 - Crucible Framework (see North Shore AI monorepo)
 - CNS Project (see North Shore AI monorepo)
-

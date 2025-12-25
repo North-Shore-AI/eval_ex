@@ -13,12 +13,27 @@ defmodule EvalEx.Sample do
           target: String.t() | [String.t()],
           choices: [String.t()] | nil,
           metadata: map(),
+          sandbox: map() | nil,
+          files: map() | nil,
+          setup: String.t() | nil,
           model_output: String.t() | nil,
           scores: map(),
           error: map() | nil
         }
 
-  defstruct [:id, :input, :target, :choices, :model_output, :error, metadata: %{}, scores: %{}]
+  defstruct [
+    :id,
+    :input,
+    :target,
+    :choices,
+    :sandbox,
+    :files,
+    :setup,
+    :model_output,
+    :error,
+    metadata: %{},
+    scores: %{}
+  ]
 
   @doc """
   Creates a new sample with the given options.
@@ -54,7 +69,10 @@ defmodule EvalEx.Sample do
       input: Keyword.fetch!(opts, :input),
       target: Keyword.get(opts, :target, ""),
       choices: Keyword.get(opts, :choices),
-      metadata: Keyword.get(opts, :metadata, %{})
+      metadata: Keyword.get(opts, :metadata, %{}),
+      sandbox: Keyword.get(opts, :sandbox),
+      files: Keyword.get(opts, :files),
+      setup: Keyword.get(opts, :setup)
     }
   end
 

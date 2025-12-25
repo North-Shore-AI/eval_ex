@@ -21,6 +21,39 @@ defmodule EvalEx.Metrics do
   end
 
   @doc """
+  Mean accuracy for a list of numeric scores.
+  """
+  @spec accuracy([number()]) :: float()
+  def accuracy(values) when is_list(values) do
+    case values do
+      [] -> 0.0
+      _ -> Enum.sum(values) / length(values)
+    end
+  end
+
+  @doc """
+  Standard error of the mean for a list of numeric scores.
+  """
+  @spec stderr([number()]) :: float()
+  def stderr(values) when is_list(values) do
+    n = length(values)
+
+    if n < 2 do
+      0.0
+    else
+      mean = Enum.sum(values) / n
+
+      variance =
+        values
+        |> Enum.reduce(0.0, fn value, acc -> acc + :math.pow(value - mean, 2) end)
+        |> Kernel./(n - 1)
+
+      std = :math.sqrt(variance)
+      std / :math.sqrt(n)
+    end
+  end
+
+  @doc """
   Token-level F1 score.
 
   Computes precision and recall based on overlapping tokens.

@@ -5,7 +5,7 @@
 ```elixir
 # mix.exs
 def deps do
-  [{:eval_ex, "~> 0.1.1"}]
+  [{:eval_ex, "~> 0.1.2"}]
 end
 ```
 

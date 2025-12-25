@@ -21,6 +21,18 @@ defmodule EvalEx.Task.RegistryTest do
     def scorers, do: []
   end
 
+  defmodule DecoratedTasks do
+    use EvalEx.Task, decorator: true
+
+    task example_task() do
+      EvalEx.Task.new(id: "example_task", name: "Example Task", dataset: [])
+    end
+
+    task custom_task(opts), name: "decorated/custom" do
+      EvalEx.Task.new(id: "custom_task", name: "Custom Task", dataset: [], metadata: opts)
+    end
+  end
+
   setup do
     # Start a fresh registry for each test
     {:ok, pid} = start_supervised({Registry, name: :"registry_#{:erlang.unique_integer()}"})
@@ -109,6 +121,30 @@ defmodule EvalEx.Task.RegistryTest do
 
       # Unknown tasks return error
       assert {:error, :not_found} = GenServer.call(registry, {:get, "unknown"})
+    end
+
+    test "registers decorated tasks and creates task instances", %{registry: registry} do
+      assert :ok = Registry.register_module(DecoratedTasks, registry: registry)
+
+      task_ids = GenServer.call(registry, :list)
+      assert "example_task" in task_ids
+      assert "decorated/custom" in task_ids
+
+      assert {:ok, %EvalEx.Task.Definition{} = defn} =
+               GenServer.call(registry, {:get, "example_task"})
+
+      assert defn.params == []
+
+      assert {:ok, %EvalEx.Task{} = task} =
+               Registry.create("example_task", registry: registry)
+
+      assert task.id == "example_task"
+      assert task.name == "Example Task"
+
+      assert {:ok, %EvalEx.Task{} = task} =
+               Registry.create("decorated/custom", [flag: true], registry: registry)
+
+      assert task.metadata == [flag: true]
     end
   end
 end

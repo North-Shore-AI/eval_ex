@@ -14,6 +14,9 @@ defmodule EvalEx.SampleTest do
       assert sample.model_output == nil
       assert sample.scores == %{}
       assert sample.error == nil
+      assert sample.sandbox == nil
+      assert sample.files == nil
+      assert sample.setup == nil
       assert is_binary(sample.id)
     end
 
@@ -24,7 +27,10 @@ defmodule EvalEx.SampleTest do
           input: "What is 2+2?",
           target: "4",
           choices: ["3", "4", "5"],
-          metadata: %{difficulty: "easy"}
+          metadata: %{difficulty: "easy"},
+          sandbox: %{type: :local},
+          files: %{"input.txt" => "data"},
+          setup: "echo ready"
         )
 
       assert sample.id == "sample_1"
@@ -32,6 +38,9 @@ defmodule EvalEx.SampleTest do
       assert sample.target == "4"
       assert sample.choices == ["3", "4", "5"]
       assert sample.metadata == %{difficulty: "easy"}
+      assert sample.sandbox == %{type: :local}
+      assert sample.files == %{"input.txt" => "data"}
+      assert sample.setup == "echo ready"
     end
 
     test "generates unique ID when not provided" do

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-12-24
+
+### Added
+
+- `task/2` macro and task definitions metadata for registry discovery
+- Dataset adapter for CrucibleDatasets -> EvalEx samples
+- LLMJudge `GRADE: C/I/P` parsing with partial credit and grader model role
+- Accuracy and stderr metric helpers for scorer aggregation
+
+### Changed
+
+- Task struct expanded with inspect-ai limits/config metadata
+- Sample struct expanded with sandbox/files/setup fields
+- README/docs updated for new task/decorator and grading semantics
+
 ## [0.1.1] - 2025-12-23
 
 ### Added
