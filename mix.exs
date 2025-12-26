@@ -1,7 +1,7 @@
 defmodule EvalEx.MixProject do
   use Mix.Project
 
-  @version "0.1.2"
+  @version "0.1.3"
   @source_url "https://github.com/North-Shore-AI/eval_ex"
 
   def version, do: @version
@@ -60,7 +60,7 @@ defmodule EvalEx.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
-      {:crucible_datasets, "~> 0.5.1"},
+      {:crucible_datasets, "~> 0.5.2"},
       {:statistics, "~> 0.6"},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
