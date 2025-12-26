@@ -34,7 +34,8 @@ defmodule EvalEx.Comparison do
 
   """
   @spec compare(list(Result.t())) :: t()
-  def compare(results) when is_list(results) and length(results) > 0 do
+  def compare(results) when is_list(results) do
+    if Enum.empty?(results), do: raise(ArgumentError, "results cannot be empty")
     metric_comparisons = compare_metrics(results)
     rankings = rank_results(results, metric_comparisons)
     best = determine_best(rankings)
@@ -133,13 +134,7 @@ defmodule EvalEx.Comparison do
             0.0
 
           %{values: values} ->
-            max_value = values |> Enum.map(&elem(&1, 1)) |> Enum.max()
-
-            if max_value > 0 do
-              stats.mean / max_value
-            else
-              0.0
-            end
+            normalize_metric_score(stats.mean, values)
         end
       end)
 
@@ -152,6 +147,38 @@ defmodule EvalEx.Comparison do
 
   defp determine_best([]), do: nil
   defp determine_best([{best, _score} | _rest]), do: best
+
+  defp normalize_metric_score(mean, values) do
+    max_value = values |> Enum.map(&elem(&1, 1)) |> Enum.max()
+    if max_value > 0, do: mean / max_value, else: 0.0
+  end
+
+  defp build_pairwise_test(r1, r2, metric) do
+    v1 = get_metric_values(r1, metric)
+    v2 = get_metric_values(r2, metric)
+
+    if not Enum.empty?(v1) and not Enum.empty?(v2) do
+      t_stat = calculate_t_statistic(v1, v2)
+
+      %{
+        pair: "#{r1.name} vs #{r2.name}",
+        t_statistic: t_stat,
+        significant: abs(t_stat) > 1.96
+      }
+    else
+      nil
+    end
+  end
+
+  defp format_metric_test({metric, test_results}) do
+    results_str =
+      Enum.map_join(test_results, ", ", fn test ->
+        sig = if test.significant, do: "*", else: ""
+        "#{test.pair}: t=#{Float.round(test.t_statistic, 2)}#{sig}"
+      end)
+
+    "  #{metric}: #{results_str}"
+  end
 
   defp run_statistical_tests(results) when length(results) < 2 do
     %{note: "Need at least 2 results for statistical testing"}
@@ -176,20 +203,7 @@ defmodule EvalEx.Comparison do
     results
     |> Enum.chunk_every(2, 1, :discard)
     |> Enum.map(fn [r1, r2] ->
-      v1 = get_metric_values(r1, metric)
-      v2 = get_metric_values(r2, metric)
-
-      if length(v1) > 0 and length(v2) > 0 do
-        t_stat = calculate_t_statistic(v1, v2)
-
-        %{
-          pair: "#{r1.name} vs #{r2.name}",
-          t_statistic: t_stat,
-          significant: abs(t_stat) > 1.96
-        }
-      else
-        nil
-      end
+      build_pairwise_test(r1, r2, metric)
     end)
     |> Enum.reject(&is_nil/1)
   end
@@ -255,15 +269,7 @@ defmodule EvalEx.Comparison do
     if Map.has_key?(tests, :note) do
       "  #{tests.note}"
     else
-      Enum.map_join(tests, "\n", fn {metric, test_results} ->
-        results_str =
-          Enum.map_join(test_results, ", ", fn test ->
-            sig = if test.significant, do: "*", else: ""
-            "#{test.pair}: t=#{Float.round(test.t_statistic, 2)}#{sig}"
-          end)
-
-        "  #{metric}: #{results_str}"
-      end)
+      Enum.map_join(tests, "\n", &format_metric_test/1)
     end
   end
 

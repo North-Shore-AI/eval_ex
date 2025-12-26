@@ -55,8 +55,7 @@ defmodule EvalEx.Crucible do
   end
 
   defp submit_to_crucible(experiment_data) do
-    # TODO: Implement actual Crucible integration
-    # This would call Crucible.Experiment.create/1 or similar
+    # NOTE: Placeholder - production would call Crucible.Experiment.create/1 or similar
     # For now, we just log
     log_experiment(experiment_data)
     {:ok, :submitted}

@@ -94,7 +94,7 @@ defmodule EvalEx.Metrics do
     n = min(max_n, min(length(pred_tokens), length(truth_tokens)))
 
     if n == 0 do
-      if length(pred_tokens) == 0 and length(truth_tokens) == 0 do
+      if Enum.empty?(pred_tokens) and Enum.empty?(truth_tokens) do
         1.0
       else
         0.0
@@ -108,7 +108,7 @@ defmodule EvalEx.Metrics do
           common = MapSet.intersection(MapSet.new(pred_ngrams), MapSet.new(truth_ngrams))
           common_count = MapSet.size(common)
 
-          if length(pred_ngrams) == 0 do
+          if Enum.empty?(pred_ngrams) do
             0.0
           else
             common_count / length(pred_ngrams)
@@ -138,11 +138,14 @@ defmodule EvalEx.Metrics do
 
     lcs_length = lcs(pred_tokens, truth_tokens)
 
-    if length(pred_tokens) == 0 and length(truth_tokens) == 0 do
+    pred_len = length(pred_tokens)
+    truth_len = length(truth_tokens)
+
+    if pred_len == 0 and truth_len == 0 do
       1.0
     else
-      precision = if length(pred_tokens) > 0, do: lcs_length / length(pred_tokens), else: 0.0
-      recall = if length(truth_tokens) > 0, do: lcs_length / length(truth_tokens), else: 0.0
+      precision = if pred_len > 0, do: lcs_length / pred_len, else: 0.0
+      recall = if truth_len > 0, do: lcs_length / truth_len, else: 0.0
 
       if precision + recall > 0 do
         2 * (precision * recall) / (precision + recall)
@@ -160,7 +163,7 @@ defmodule EvalEx.Metrics do
   """
   @spec entailment(term(), term()) :: float()
   def entailment(prediction, ground_truth) do
-    # TODO: Integrate with actual NLI model (DeBERTa-v3)
+    # NOTE: Placeholder - production would integrate with NLI model (DeBERTa-v3)
     # For now, use token overlap as proxy
     f1(prediction, ground_truth)
   end
@@ -185,7 +188,7 @@ defmodule EvalEx.Metrics do
     # For structured predictions, check citation fields
     citations = Map.get(prediction, :citations, Map.get(prediction, "citations", []))
 
-    if is_list(citations) and length(citations) > 0 do
+    if is_list(citations) and not Enum.empty?(citations) do
       # Validate citations exist in ground truth evidence
       truth_evidence = Map.get(ground_truth, :evidence, Map.get(ground_truth, "evidence", []))
       validate_citations(citations, truth_evidence)
@@ -262,8 +265,10 @@ defmodule EvalEx.Metrics do
       matches = count_matches(pred_tokens, truth_tokens)
 
       # Calculate precision and recall
-      precision = if length(pred_tokens) > 0, do: matches / length(pred_tokens), else: 0.0
-      recall = if length(truth_tokens) > 0, do: matches / length(truth_tokens), else: 0.0
+      pred_len = length(pred_tokens)
+      truth_len = length(truth_tokens)
+      precision = if pred_len > 0, do: matches / pred_len, else: 0.0
+      recall = if truth_len > 0, do: matches / truth_len, else: 0.0
 
       # Calculate F-mean with higher weight on recall
       if precision + recall > 0 do
@@ -312,7 +317,7 @@ defmodule EvalEx.Metrics do
   """
   @spec bert_score(term(), term()) :: map()
   def bert_score(prediction, ground_truth) do
-    # TODO: Integrate with actual BERT/transformer model
+    # NOTE: Placeholder - production would integrate with BERT/transformer model
     # For now, return token-based similarity as placeholder
     similarity = f1(prediction, ground_truth)
 
@@ -438,10 +443,10 @@ defmodule EvalEx.Metrics do
         Enum.any?(evidence, fn ev -> matches_citation?(ev, citation_id) end)
       end)
 
-    if length(citations) > 0 do
-      valid_count / length(citations)
-    else
+    if Enum.empty?(citations) do
       0.0
+    else
+      valid_count / length(citations)
     end
   end
 

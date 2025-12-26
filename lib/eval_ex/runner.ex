@@ -41,9 +41,11 @@ defmodule EvalEx.Runner do
   defp get_ground_truth(evaluation, opts) do
     case Keyword.get(opts, :ground_truth) do
       nil ->
-        # Try to load from dataset
-        if Code.ensure_loaded?(EvalEx.Datasets) do
-          apply(EvalEx.Datasets, :load, [evaluation.dataset()])
+        # Build module name dynamically to avoid compile-time warning on optional module
+        datasets_module = Module.concat([EvalEx, Datasets])
+
+        if Code.ensure_loaded?(datasets_module) do
+          datasets_module.load(evaluation.dataset())
         else
           {:error, :no_ground_truth}
         end

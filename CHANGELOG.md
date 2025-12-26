@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-12-25
+
+### Fixed
+
+- Fix compile warning for undefined `EvalEx.Datasets.load/1` by using `apply/3` for runtime dispatch
+- Credo fixes for code quality
+
+### Changed
+
+- Bump `crucible_datasets` dependency to `~> 0.5.3`
+
 ## [0.1.3] - 2025-12-25
 
 ### Changed

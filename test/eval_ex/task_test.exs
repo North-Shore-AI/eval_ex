@@ -1,7 +1,7 @@
 defmodule EvalEx.TaskTest do
   use ExUnit.Case, async: true
 
-  alias EvalEx.{Task, Sample, Scorer.ExactMatch}
+  alias EvalEx.{Sample, Scorer.ExactMatch, Task}
 
   describe "new/1" do
     test "creates task with required fields" do

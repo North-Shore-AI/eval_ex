@@ -25,6 +25,8 @@ defmodule EvalEx.Task.Registry do
 
   use GenServer
 
+  alias EvalEx.Task.Definition
+
   @doc """
   Starts the registry GenServer.
 
@@ -111,8 +113,8 @@ defmodule EvalEx.Task.Registry do
     registry = Keyword.get(opts, :registry, __MODULE__)
 
     case GenServer.call(registry, {:get, task_id}) do
-      {:ok, %EvalEx.Task.Definition{} = defn} ->
-        {:ok, EvalEx.Task.Definition.invoke(defn, args)}
+      {:ok, %Definition{} = defn} ->
+        {:ok, Definition.invoke(defn, args)}
 
       {:ok, module} when is_atom(module) ->
         {:ok, EvalEx.Task.from_module(module)}
@@ -126,7 +128,7 @@ defmodule EvalEx.Task.Registry do
   def init(_), do: {:ok, %{}}
 
   @impl true
-  def handle_call({:register, %EvalEx.Task.Definition{} = definition}, _from, state) do
+  def handle_call({:register, %Definition{} = definition}, _from, state) do
     {:reply, :ok, Map.put(state, definition.name, definition)}
   end
 
