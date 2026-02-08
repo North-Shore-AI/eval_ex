@@ -1,7 +1,7 @@
 defmodule EvalEx.MixProject do
   use Mix.Project
 
-  @version "0.1.5"
+  @version "0.2.0"
   @source_url "https://github.com/North-Shore-AI/eval_ex"
 
   def version, do: @version
@@ -44,7 +44,22 @@ defmodule EvalEx.MixProject do
       source_url: @source_url,
       assets: %{"assets" => "assets"},
       logo: "assets/eval_ex.svg",
-      extras: ["README.md", "LICENSE"]
+      extras: [
+        "README.md",
+        "LICENSE"
+      ],
+      groups_for_modules: [
+        Core: [
+          EvalEx,
+          EvalEx.Evaluation,
+          EvalEx.Runner,
+          EvalEx.Result,
+          EvalEx.Comparison
+        ],
+        Metrics: [
+          EvalEx.Metrics
+        ]
+      ]
     ]
   end
 
@@ -62,7 +77,7 @@ defmodule EvalEx.MixProject do
       {:jason, "~> 1.4"},
       {:crucible_datasets, "~> 0.5.4"},
       {:statistics, "~> 0.6"},
-      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
     ]
